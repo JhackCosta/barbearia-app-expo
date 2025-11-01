@@ -11,6 +11,7 @@ import {
   Divider
 } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { RootStackParamList, Cliente, Agendamento, TipoServico, TIPOS_SERVICO } from '../types';
 import { ClienteStorage, AgendamentoStorage } from '../storage';
@@ -35,9 +36,12 @@ const NovoAgendamentoScreen: React.FC<Props> = ({ navigation }) => {
   const [servico, setServico] = useState<TipoServico>('Corte e Barba');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    carregarClientes();
-  }, []);
+  // Recarrega os clientes toda vez que a tela recebe foco
+  useFocusEffect(
+    React.useCallback(() => {
+      carregarClientes();
+    }, [])
+  );
 
   const carregarClientes = async () => {
     try {

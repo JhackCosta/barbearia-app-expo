@@ -214,13 +214,13 @@ const RelatoriosScreen: React.FC<Props> = ({navigation}) => {
                 </Surface>
               </View>
 
-              {estatisticas.totalAtendimentos > 0 && (
+              {estatisticas.totalConcluidos > 0 && (
                 <View style={styles.mediaBox}>
                   <Text variant="titleMedium" style={styles.mediaText}>
                     💰 Ticket Médio: R${' '}
                     {(
                       estatisticas.totalRecebido /
-                      estatisticas.totalAtendimentos
+                      estatisticas.totalConcluidos
                     ).toFixed(2)}
                   </Text>
                 </View>
