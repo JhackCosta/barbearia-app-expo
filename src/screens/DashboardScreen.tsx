@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, FlatList, Alert, StyleSheet } from 'react-native';
+import { View, FlatList, StyleSheet } from 'react-native';
 import {
   Card,
   Title,
@@ -17,6 +17,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {RootStackParamList, Agendamento, VALORES_SERVICOS} from '../types';
 import {AgendamentoStorage} from '../storage';
 import {WhatsAppService} from '../services/WhatsAppService';
+import { Dialog } from '../components/Dialog';
+import { useDialog } from '../hooks/useDialog';
 
 type DashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Dashboard'>;
 
@@ -27,6 +29,7 @@ interface Props {
 const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(true);
+  const { dialog, showDialog, hideDialog } = useDialog();
 
   const carregarAgendamentos = async () => {
     try {
@@ -44,7 +47,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
       setAgendamentos(agendamentosFuturos);
     } catch (error) {
       console.error('Erro ao carregar agendamentos:', error);
-      Alert.alert('Erro', 'Não foi possível carregar os agendamentos.');
+      showDialog('Erro', 'Não foi possível carregar os agendamentos.');
     } finally {
       setLoading(false);
     }
@@ -56,8 +59,8 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
     }, [])
   );
 
-    const cancelarAgendamento = async (agendamento: Agendamento) => {
-    Alert.alert(
+  const cancelarAgendamento = async (agendamento: Agendamento) => {
+    showDialog(
       'Confirmar Cancelamento',
       'Tem certeza que deseja cancelar este agendamento?',
       [
@@ -69,7 +72,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             try {
               await AgendamentoStorage.cancelarAgendamento(agendamento.id);
 
-              Alert.alert(
+              showDialog(
                 '✅ Cancelado',
                 'Deseja avisar o cliente por WhatsApp?',
                 [
@@ -77,7 +80,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                     text: 'Não',
                     style: 'cancel',
                     onPress: () => {
-                      Alert.alert('Sucesso', 'Agendamento cancelado!');
+                      showDialog('Sucesso', 'Agendamento cancelado!');
                       carregarAgendamentos();
                     }
                   },
@@ -94,7 +97,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                 ]
               );
             } catch (error) {
-              Alert.alert('Erro', 'Não foi possível cancelar o agendamento.');
+              showDialog('Erro', 'Não foi possível cancelar o agendamento.');
             }
           },
         },
@@ -104,7 +107,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
 
   const concluirAgendamento = async (agendamento: Agendamento) => {
     const valorPadrao = VALORES_SERVICOS[agendamento.servico];
-    Alert.alert(
+    showDialog(
       'Concluir Atendimento',
       `Cliente: ${agendamento.cliente.nome}\nServiço: ${agendamento.servico}\n\nValor sugerido: R$ ${valorPadrao.toFixed(2)}`,
       [
@@ -118,7 +121,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                 valorPadrao,
               );
 
-              Alert.alert(
+              showDialog(
                 '✅ Concluído',
                 'Deseja enviar agradecimento por WhatsApp?',
                 [
@@ -126,7 +129,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                     text: 'Não',
                     style: 'cancel',
                     onPress: () => {
-                      Alert.alert('Sucesso', 'Atendimento concluído!');
+                      showDialog('Sucesso', 'Atendimento concluído!');
                       carregarAgendamentos();
                     }
                   },
@@ -143,7 +146,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                 ]
               );
             } catch (error) {
-              Alert.alert('Erro', 'Não foi possível concluir o atendimento.');
+              showDialog('Erro', 'Não foi possível concluir o atendimento.');
             }
           },
         },
@@ -278,6 +281,14 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
         style={styles.fab}
         onPress={() => navigation.navigate('NovoAgendamento')}
         label="Novo Agendamento"
+      />
+
+      <Dialog
+        visible={dialog.visible}
+        title={dialog.title}
+        message={dialog.message}
+        buttons={dialog.buttons}
+        onDismiss={hideDialog}
       />
     </View>
   );

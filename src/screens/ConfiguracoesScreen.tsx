@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react';
-import {View, StyleSheet, ScrollView, Alert} from 'react-native';
+import {View, StyleSheet, ScrollView, Platform} from 'react-native';
 import {
   Card,
   Title,
@@ -13,6 +13,9 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../types';
+import {CacheManager} from '../utils/cacheManager';
+import { Dialog } from '../components/Dialog';
+import { useDialog } from '../hooks/useDialog';
 
 type ConfiguracoesNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -79,6 +82,7 @@ const ConfiguracoesScreen: React.FC<Props> = ({navigation}) => {
   const [msgAgradecimento, setMsgAgradecimento] = useState(MENSAGENS_PADRAO.agradecimento);
   const [msgRetorno, setMsgRetorno] = useState(MENSAGENS_PADRAO.retorno);
   const [loading, setLoading] = useState(true);
+  const { dialog, showDialog, hideDialog } = useDialog();
 
   useEffect(() => {
     carregarConfiguracoes();
@@ -116,15 +120,15 @@ const ConfiguracoesScreen: React.FC<Props> = ({navigation}) => {
         AsyncStorage.setItem(STORAGE_KEYS.MSG_RETORNO, msgRetorno),
       ]);
 
-      Alert.alert('✅ Sucesso', 'Configurações salvas com sucesso!');
+      showDialog('✅ Sucesso', 'Configurações salvas com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar configurações:', error);
-      Alert.alert('❌ Erro', 'Não foi possível salvar as configurações.');
+      showDialog('❌ Erro', 'Não foi possível salvar as configurações.');
     }
   };
 
   const restaurarPadrao = () => {
-    Alert.alert(
+    showDialog(
       'Restaurar Padrão',
       'Tem certeza que deseja restaurar as mensagens padrão?',
       [
@@ -137,6 +141,46 @@ const ConfiguracoesScreen: React.FC<Props> = ({navigation}) => {
             setMsgCancelamento(MENSAGENS_PADRAO.cancelamento);
             setMsgAgradecimento(MENSAGENS_PADRAO.agradecimento);
             setMsgRetorno(MENSAGENS_PADRAO.retorno);
+          },
+        },
+      ],
+    );
+  };
+
+  const limparCache = async () => {
+    // Mostra a versão atual do cache
+    const cacheVersion = await CacheManager.getCurrentVersion();
+
+    showDialog(
+      '🗑️ Limpar Cache',
+      `Versão atual do cache: ${cacheVersion}\n\nIsso irá limpar TODOS os dados do aplicativo (clientes, agendamentos e configurações). Tem certeza?`,
+      [
+        {text: 'Cancelar', style: 'cancel'},
+        {
+          text: 'Limpar Tudo',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await CacheManager.clearAll();
+              showDialog(
+                '✅ Cache Limpo',
+                'Todos os dados foram removidos. A página será recarregada.',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                      if (Platform.OS === 'web') {
+                        // No Web, recarrega a página
+                        window.location.reload();
+                      }
+                    },
+                  },
+                ],
+              );
+            } catch (error) {
+              console.error('Erro ao limpar cache:', error);
+              showDialog('❌ Erro', 'Não foi possível limpar o cache.');
+            }
           },
         },
       ],
@@ -180,6 +224,36 @@ const ConfiguracoesScreen: React.FC<Props> = ({navigation}) => {
         </Card>
 
         <Divider style={styles.divider} />
+
+        {/* Botão para Limpar Cache (somente Web) */}
+        {Platform.OS === 'web' && (
+          <>
+            <Card style={[styles.menuCard, styles.dangerCard]}>
+              <Card.Content>
+                <View style={styles.menuItem}>
+                  <View style={[styles.menuIcon, styles.dangerIcon]}>
+                    <Text style={styles.menuIconText}>🗑️</Text>
+                  </View>
+                  <View style={styles.menuContent}>
+                    <Title style={styles.menuTitle}>Limpar Cache</Title>
+                    <Text style={styles.menuDescription}>
+                      Remove todos os dados salvos no navegador
+                    </Text>
+                  </View>
+                </View>
+                <Button
+                  mode="contained"
+                  buttonColor="#E74C3C"
+                  onPress={limparCache}
+                  style={styles.dangerButton}
+                >
+                  Limpar Todos os Dados
+                </Button>
+              </Card.Content>
+            </Card>
+            <Divider style={styles.divider} />
+          </>
+        )}
 
         {/* Seção de Mensagens WhatsApp */}
         <Text style={styles.sectionTitle}>📱 Mensagens do WhatsApp</Text>
@@ -315,6 +389,14 @@ const ConfiguracoesScreen: React.FC<Props> = ({navigation}) => {
           </Button>
         </View>
       </View>
+
+      <Dialog
+        visible={dialog.visible}
+        title={dialog.title}
+        message={dialog.message}
+        buttons={dialog.buttons}
+        onDismiss={hideDialog}
+      />
     </ScrollView>
   );
 };
@@ -430,6 +512,17 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+  },
+  dangerCard: {
+    borderWidth: 2,
+    borderColor: '#E74C3C',
+    backgroundColor: '#FFEBEE',
+  },
+  dangerIcon: {
+    backgroundColor: '#FFCDD2',
+  },
+  dangerButton: {
+    marginTop: 12,
   },
 });
 

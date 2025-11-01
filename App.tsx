@@ -1,17 +1,34 @@
-import React, { useEffect } from 'react';
-import { StatusBar } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StatusBar, View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PaperProvider } from 'react-native-paper';
 
 import Navigation from './src/navigation/Navigation';
 import { NotificationService } from './src/services/NotificationService';
 import { VALORES_SERVICOS } from './src/types';
+import { CacheManager } from './src/utils/cacheManager';
 
 function App(): React.JSX.Element {
+  const [isInitializing, setIsInitializing] = useState(true);
+
   useEffect(() => {
-    NotificationService.init();
-    carregarPrecosPersonalizados();
+    initializeApp();
   }, []);
+
+  const initializeApp = async () => {
+    try {
+      // Verifica e limpa cache se necessário (somente Web)
+      await CacheManager.checkAndClearIfNeeded();
+
+      // Inicializa serviços
+      NotificationService.init();
+      await carregarPrecosPersonalizados();
+    } catch (error) {
+      console.error('Erro ao inicializar app:', error);
+    } finally {
+      setIsInitializing(false);
+    }
+  };
 
   const carregarPrecosPersonalizados = async () => {
     try {
@@ -35,6 +52,16 @@ function App(): React.JSX.Element {
     }
   };
 
+  // Mostra loading enquanto inicializa
+  if (isInitializing) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6200EA" />
+        <Text style={styles.loadingText}>Carregando...</Text>
+      </View>
+    );
+  }
+
   return (
     <PaperProvider>
       <StatusBar
@@ -45,5 +72,19 @@ function App(): React.JSX.Element {
     </PaperProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6200EA',
+  },
+});
 
 export default App;
